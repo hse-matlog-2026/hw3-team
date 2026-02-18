@@ -59,9 +59,9 @@ def is_binary(string: str) -> bool:
     Returns:
         ``True`` if the given string is a binary operator, ``False`` otherwise.
     """
-    return string == '&' or string == '|' or string == '->'
+    # return string == '&' or string == '|' or string == '->'
     # For Chapter 3:
-    # return string in {'&', '|',  '->', '+', '<->', '-&', '-|'}
+    return string in {'&', '|',  '->', '+', '<->', '-&', '-|'}
 
 @frozen
 class Formula:
@@ -359,6 +359,18 @@ class Formula:
         """
         for variable in substitution_map:
             assert is_variable(variable)
+        if is_variable(self.root):
+            if self.root in substitution_map:
+                return substitution_map[self.root]
+            return self
+        if is_constant(self.root):
+            return self
+
+        if is_unary(self.root):
+            return Formula('~', self.first.substitute_variables(substitution_map))
+        left = self.first.substitute_variables(substitution_map)
+        right = self.second.substitute_variables(substitution_map)
+        return Formula(self.root, left, right)
         # Task 3.3
 
     def substitute_operators(self, substitution_map: Mapping[str, Formula]) -> \
@@ -389,4 +401,26 @@ class Formula:
             assert is_constant(operator) or is_unary(operator) or \
                    is_binary(operator)
             assert substitution_map[operator].variables().issubset({'p', 'q'})
+        if is_variable(self.root):
+            return self
+        if is_constant(self.root):
+            if self.root in substitution_map:
+                return substitution_map[self.root]
+            return self
+
+        if is_unary(self.root):
+            inside = self.first.substitute_operators(substitution_map)
+            if self.root in substitution_map:
+                temp = substitution_map[self.root]
+                return temp.substitute_variables({'p': inside})
+            return Formula('~', inside)
+
+        left = self.first.substitute_operators(substitution_map)
+        right = self.second.substitute_operators(substitution_map)
+
+        if self.root in substitution_map:
+            temp = substitution_map[self.root]
+            return temp.substitute_variables({'p': left, 'q': right})
+        return Formula(self.root, left, right)
         # Task 3.4
+
